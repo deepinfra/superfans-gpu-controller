@@ -32,13 +32,13 @@ def retrieve_nvidia_gpu_temperature():
     else:
         return False
 
-def superfans_gpu_controller(fan_settings, FAN_INCREASED_MIN_TIME=120, sleep_sec=2, gpu_moving_avg_num=5, fan_target_eps=2.0):
+def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2, gpu_moving_avg_num=5, fan_target_eps=2.0):
     """
     Controller function that monitors GPU temperature in constant loop and adjusts FAN speeds based on provided `fan_settings`.
     After the loop the default preset is restored.
 
     :param fan_settings: dictionary that maps the temperature in deg C to % of fan speed
-    :param FAN_INCREASED_MIN_TIME: minimal time before a fan speed is again reduced (based on previous change) default=120
+    :param FAN_DECREASE_MIN_TIME: minimal time before a fan speed is again reduced (based on previous change) default=120
     :param sleep_sec: loop sleep time (default=2 sec)
     :param gpu_moving_avg_num: moving average for GPU i.e. the number of last measurements that are averaged (default=5)
     :param fan_target_eps: tolerance of fan target w.r.t. the the actual value in deg C (default=1.0)
@@ -61,8 +61,16 @@ def superfans_gpu_controller(fan_settings, FAN_INCREASED_MIN_TIME=120, sleep_sec
     enable_persistance_nvidia()
 
     try:
+        ZONES = [
+            superfans.FAN_ZONE_SYS1,
+            superfans.FAN_ZONE_SYS2,
+            superfans.FAN_ZONE_SYS3,
+            superfans.FAN_ZONE_SYS4,
+        ]
         FAN_MEMBERS = superfans.FAN_ZONES_MEMBERS[superfans.FAN_ZONE_SYS1] + \
-                      superfans.FAN_ZONES_MEMBERS[superfans.FAN_ZONE_SYS2]
+                      superfans.FAN_ZONES_MEMBERS[superfans.FAN_ZONE_SYS2] + \
+                      superfans.FAN_ZONES_MEMBERS[superfans.FAN_ZONE_SYS3] + \
+                      superfans.FAN_ZONES_MEMBERS[superfans.FAN_ZONE_SYS4]
 
         # GPU moving average
         previous_target_fan = None
@@ -101,34 +109,44 @@ def superfans_gpu_controller(fan_settings, FAN_INCREASED_MIN_TIME=120, sleep_sec
 
             current_fan_levels = superfans.get_fan(superfan_config, FAN_MEMBERS)
             current_update_time = time.time()
-            diff_sys1_fan = [abs(current_fan_levels[FAN] - target_fan) for FAN in superfans.FAN_ZONES_MEMBERS[superfans.FAN_ZONE_SYS1] if FAN in current_fan_levels and current_fan_levels[FAN] > 0]
-            diff_sys2_fan = [abs(current_fan_levels[FAN] - target_fan) for FAN in superfans.FAN_ZONES_MEMBERS[superfans.FAN_ZONE_SYS2] if FAN in current_fan_levels and current_fan_levels[FAN] > 0]
+            diff_sys_fan = [abs(current_fan_levels[FAN] - target_fan) for FAN in FAN_MEMBERS if FAN in current_fan_levels and current_fan_levels[FAN] > 0]
+            #diff_sys1_fan = [abs(current_fan_levels[FAN] - target_fan) for FAN in superfans.FAN_ZONES_MEMBERS[superfans.FAN_ZONE_SYS1] if FAN in current_fan_levels and current_fan_levels[FAN] > 0]
+            #diff_sys2_fan = [abs(current_fan_levels[FAN] - target_fan) for FAN in superfans.FAN_ZONES_MEMBERS[superfans.FAN_ZONE_SYS2] if FAN in current_fan_levels and current_fan_levels[FAN] > 0]
 
+            print("diff_sys1_fan %s" % diff_sys_fan)
+ #           print("diff_sys1_fan %s" % diff_sys1_fan)
+#            print("diff_sys2_fan %s" % diff_sys2_fan)
 	    # TODO: ignore outlier FANs in case they are faulty
 
             disbale_update = False
 
             if previous_update_time is not None and previous_target_fan is not None:
-                has_enough_time_elapsed = current_update_time - previous_update_time > FAN_INCREASED_MIN_TIME
+                has_enough_time_elapsed = current_update_time - previous_update_time > FAN_DECREASE_MIN_TIME
                 is_level_down_change = target_fan < previous_target_fan
                 disbale_update = True if is_level_down_change and not has_enough_time_elapsed else False
 
             if not disbale_update:
                 # Allow for 1% difference in target
-                update_sys1_fan = any([d > fan_target_eps for d in diff_sys1_fan])
-                update_sys2_fan = any([d > fan_target_eps for d in diff_sys2_fan])
-                if update_sys1_fan:
-                    superfans.set_fan(superfan_config, target_fan, superfans.FAN_ZONE_SYS1)
+                update_sys_fan = any([d > fan_target_eps for d in diff_sys_fan])
+#                update_sys1_fan = any([d > fan_target_eps for d in diff_sys1_fan])
+#                update_sys2_fan = any([d > fan_target_eps for d in diff_sys2_fan])
+                if update_sys_fan:
+                    for z in ZONES:
+                        superfans.set_fan(superfan_config, target_fan, z)
+                    #superfans.set_fan(superfan_config, target_fan, superfans.FAN_ZONE_SYS1)
 
-                if update_sys2_fan:
-                    superfans.set_fan(superfan_config, target_fan, superfans.FAN_ZONE_SYS2)
+#                if update_sys2_fan:
+#                    superfans.set_fan(superfan_config, target_fan, superfans.FAN_ZONE_SYS2)
+#                    superfans.set_fan(superfan_config, target_fan, 1)
 
-                if update_sys1_fan or update_sys2_fan:
-                    print('\tCurrent GPU measurements (in C): %s' % ','.join(map(str,GPU_temp)))
-                    print('\tMoving average GPU measurements (in C): %s  (max=%d)' % (','.join(map(str,mean_GPU_temp)),max_gpu_temp))
-                    print('\tTarget FAN speed: %d C => FAN %d %% (difference:  SYS1 fan = %.2f; SYS2 fan = %.2f)' % (max_gpu_temp, target_fan, max(diff_sys1_fan), max(diff_sys2_fan)))
-                    print('\n\n')
+                print("update sys %s " % update_sys_fan)
+                print('\tCurrent GPU measurements (in C): %s' % ','.join(map(str,GPU_temp)))
+                print('\tMoving average GPU measurements (in C): %s  (max=%d)' % (','.join(map(str,mean_GPU_temp)),max_gpu_temp))
+                print('\tTarget FAN speed: %d C => FAN %d %% (difference:  SYS1,2,3,4 fan = %.2f)' % (max_gpu_temp, target_fan, max(diff_sys_fan)))
+                print('\n\n')
 
+
+                if update_sys_fan:
                     previous_target_fan = target_fan
                     previous_update_time = current_update_time
 
