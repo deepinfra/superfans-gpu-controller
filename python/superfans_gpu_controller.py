@@ -154,7 +154,7 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
                 print('\tCurrent GPU measurements (in C): %s' % ','.join(map(str, GPU_temp)))
                 print('\tCurrent CPU measurements (in C): %s' % max_cpu_temp)
                 print('\tMoving average GPU measurements (in C): %s  (max=%d)' % (','.join(map(str, mean_GPU_temp)), max_gpu_temp))
-                print('\tTarget FAN speed: %d C => FAN %d %% (difference:  SYS1,2,3,4 fan = %.2f)' % (max_gpu_temp, target_fan, max(diff_sys_fan)))
+                print('\tTarget FAN speed: %d C => FAN %d %% (difference:  SYS1,2,3,4 fan = %.2f)' % (max_temp, target_fan, max(diff_sys_fan)))
                 print('\n\n')
 
                 if update_sys_fan:

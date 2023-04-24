@@ -9,6 +9,6 @@ setup(name='superfans-gpu-controller',
           ],
       },
       install_requires=[
-          'psutils',
+          'psutil',
       ],
      )
