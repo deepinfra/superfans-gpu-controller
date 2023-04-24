@@ -140,20 +140,22 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
                     target_fan = fan_settings[key_temp]
                     break
 
+            t5 = time.time()
             current_fan_levels = superfans.get_fan(superfan_config, FAN_MEMBERS)
-            current_update_time = time.time()
+            t6 = current_update_time = time.time()
+            print("took %s to fetch fan speeds" % (t6 - t5))
             diff_sys_fan = [abs(current_fan_levels[FAN] - target_fan) for FAN in FAN_MEMBERS if FAN in current_fan_levels and current_fan_levels[FAN] > 0]
 
             # TODO: ignore outlier FANs in case they are faulty
 
-            disbale_update = False
+            disable_update = False
 
             if previous_update_time is not None and previous_target_fan is not None:
                 has_enough_time_elapsed = current_update_time - previous_update_time > FAN_DECREASE_MIN_TIME
                 is_level_down_change = target_fan < previous_target_fan
-                disbale_update = True if is_level_down_change and not has_enough_time_elapsed else False
+                disable_update = True if is_level_down_change and not has_enough_time_elapsed else False
 
-            if not disbale_update:
+            if not disable_update:
                 # Allow for 1% difference in target
                 update_sys_fan = any([d > fan_target_eps for d in diff_sys_fan])
                 if update_sys_fan:
