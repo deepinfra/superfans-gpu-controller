@@ -3,7 +3,13 @@
 # author: Domen Tabernik
 # 2019
 
-import time, superfans, subprocess, signal, sys, json
+import time
+import superfans
+import subprocess
+import signal
+import sys
+import json
+import psutil
 
 
 class GracefulKiller:
@@ -38,7 +44,6 @@ def retrieve_nvidia_gpu_temperature():
 
 
 def retrieve_cpu_temperature():
-    import psutil
     temps = psutil.sensors_temperatures()
     if not temps:
         print("No temperature sensors found")
@@ -104,9 +109,14 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
         k = GracefulKiller()
         while not k.kill_now:
 
-            # get GPU temperature
+            # get GPU, CPU temperature
+            t0 = time.time()
             GPU_temp = retrieve_nvidia_gpu_temperature()
+            t1 = time.time()
+            print("took %s sec to retrieve GPU temperature" % (t1-t0))
             max_cpu_temp = retrieve_cpu_temperature()
+            t2 = time.time()
+            print("took %s sec to retrieve CPU temperature" % (t2-t1))
 
             prev_GPU_temp.append(GPU_temp)
 
@@ -134,7 +144,7 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
             current_update_time = time.time()
             diff_sys_fan = [abs(current_fan_levels[FAN] - target_fan) for FAN in FAN_MEMBERS if FAN in current_fan_levels and current_fan_levels[FAN] > 0]
 
-	        # TODO: ignore outlier FANs in case they are faulty
+            # TODO: ignore outlier FANs in case they are faulty
 
             disbale_update = False
 
