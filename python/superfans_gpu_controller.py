@@ -59,7 +59,7 @@ def retrieve_cpu_temperature():
     return max_temp
 
 
-def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2, gpu_moving_avg_num=5, fan_target_eps=2.0):
+def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2, fan_target_eps=2.0):
     """
     Controller function that monitors GPU temperature in constant loop and adjusts FAN speeds based on provided `fan_settings`.
     After the loop the default preset is restored.
@@ -67,7 +67,6 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
     :param fan_settings: dictionary that maps the temperature in deg C to % of fan speed
     :param FAN_DECREASE_MIN_TIME: minimal time before a fan speed is again reduced (based on previous change) default=120
     :param sleep_sec: loop sleep time (default=2 sec)
-    :param gpu_moving_avg_num: moving average for GPU i.e. the number of last measurements that are averaged (default=5)
     :param fan_target_eps: tolerance of fan target w.r.t. the the actual value in deg C (default=1.0)
     :return:
     """
@@ -103,9 +102,7 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
         previous_target_fan = None
         previous_update_time = None
 
-        prev_GPU_temp = []
         mean_GPU_temp = None
-        #last_GPU_temp = None
 
         # ensure correct ending when SIGINT and SIGTERM are received
         k = GracefulKiller()
@@ -117,20 +114,8 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
 
             if not mean_GPU_temp:
                 mean_GPU_temp = GPU_temp
-            #prev_GPU_temp.append(GPU_temp)
-            #last_GPU_temp = GPU_temp
 
-            # # continue until we have enough sampels for moving average
-            # if len(prev_GPU_temp) < gpu_moving_avg_num:
-            #     continue
-            #
-            # # retain last 5 mesurements
-            # prev_GPU_temp = prev_GPU_temp[-gpu_moving_avg_num:]
-            # mean_GPU_temp = prev_GPU_temp[0]
-            # for gpu_temp in prev_GPU_temp[1:]:
-            #     mean_GPU_temp = [x+y for x, y in zip(gpu_temp, mean_GPU_temp)]
-            #
-            # mean_GPU_temp = [x/len(prev_GPU_temp) for x in mean_GPU_temp]
+            # calculate moving average
             # round the temperature to 0.1 deg C
             mean_GPU_temp = [round(x * 5 + y * 5) / 10.0 for x, y in zip(GPU_temp, mean_GPU_temp)]
 
