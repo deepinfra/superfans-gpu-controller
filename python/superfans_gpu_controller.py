@@ -104,33 +104,31 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
         previous_update_time = None
 
         prev_GPU_temp = []
+        #last_GPU_temp = None
 
         # ensure correct ending when SIGINT and SIGTERM are received
         k = GracefulKiller()
         while not k.kill_now:
 
             # get GPU, CPU temperature
-            t0 = time.time()
             GPU_temp = retrieve_nvidia_gpu_temperature()
-            t1 = time.time()
-            print("took %s sec to retrieve GPU temperature" % (t1-t0))
             max_cpu_temp = retrieve_cpu_temperature()
-            t2 = time.time()
-            print("took %s sec to retrieve CPU temperature" % (t2-t1))
 
-            prev_GPU_temp.append(GPU_temp)
+            #prev_GPU_temp.append(GPU_temp)
+            #last_GPU_temp = GPU_temp
 
-            # continue until we have enough sampels for moving average
-            if len(prev_GPU_temp) < gpu_moving_avg_num:
-                continue
-
-            # retain last 5 mesurements
-            prev_GPU_temp = prev_GPU_temp[-gpu_moving_avg_num:]
-            mean_GPU_temp = prev_GPU_temp[0]
-            for gpu_temp in prev_GPU_temp[1:]:
-                mean_GPU_temp = [x+y for x, y in zip(gpu_temp, mean_GPU_temp)]
-
-            mean_GPU_temp = [x/len(prev_GPU_temp) for x in mean_GPU_temp]
+            # # continue until we have enough sampels for moving average
+            # if len(prev_GPU_temp) < gpu_moving_avg_num:
+            #     continue
+            #
+            # # retain last 5 mesurements
+            # prev_GPU_temp = prev_GPU_temp[-gpu_moving_avg_num:]
+            # mean_GPU_temp = prev_GPU_temp[0]
+            # for gpu_temp in prev_GPU_temp[1:]:
+            #     mean_GPU_temp = [x+y for x, y in zip(gpu_temp, mean_GPU_temp)]
+            #
+            # mean_GPU_temp = [x/len(prev_GPU_temp) for x in mean_GPU_temp]
+            mean_GPU_temp = [x * 0.5 + y * 0.5 for x, y in zip(GPU_temp, mean_GPU_temp)]
 
             max_gpu_temp = max(mean_GPU_temp)
             max_temp = max(max_gpu_temp, max_cpu_temp)
@@ -140,10 +138,9 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
                     target_fan = fan_settings[key_temp]
                     break
 
-            t5 = time.time()
+            # This is slow if the CPU is busy
             current_fan_levels = superfans.get_fan(superfan_config, FAN_MEMBERS)
-            t6 = current_update_time = time.time()
-            print("took %s to fetch fan speeds" % (t6 - t5))
+            current_update_time = time.time()
             diff_sys_fan = [abs(current_fan_levels[FAN] - target_fan) for FAN in FAN_MEMBERS if FAN in current_fan_levels and current_fan_levels[FAN] > 0]
 
             # TODO: ignore outlier FANs in case they are faulty
@@ -160,10 +157,7 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
                 update_sys_fan = any([d > fan_target_eps for d in diff_sys_fan])
                 if update_sys_fan:
                     for z in ZONES:
-                        t7 = time.time()
                         superfans.set_fan(superfan_config, target_fan, z)
-                        t8 = time.time()
-                        print("took %s to set fan speeds" % (t8 - t7))
 
                 print("update sys %s " % update_sys_fan)
                 print('\tCurrent GPU measurements (in C): %s' % ','.join(map(str, GPU_temp)))
