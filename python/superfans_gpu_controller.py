@@ -104,6 +104,7 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
         previous_update_time = None
 
         prev_GPU_temp = []
+        mean_GPU_temp = None
         #last_GPU_temp = None
 
         # ensure correct ending when SIGINT and SIGTERM are received
@@ -114,6 +115,8 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
             GPU_temp = retrieve_nvidia_gpu_temperature()
             max_cpu_temp = retrieve_cpu_temperature()
 
+            if not mean_GPU_temp:
+                mean_GPU_temp = GPU_temp
             #prev_GPU_temp.append(GPU_temp)
             #last_GPU_temp = GPU_temp
 
