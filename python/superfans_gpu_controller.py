@@ -160,7 +160,10 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
                 update_sys_fan = any([d > fan_target_eps for d in diff_sys_fan])
                 if update_sys_fan:
                     for z in ZONES:
+                        t7 = time.time()
                         superfans.set_fan(superfan_config, target_fan, z)
+                        t8 = time.time()
+                        print("took %s to set fan speeds" % (t8 - t7))
 
                 print("update sys %s " % update_sys_fan)
                 print('\tCurrent GPU measurements (in C): %s' % ','.join(map(str, GPU_temp)))
