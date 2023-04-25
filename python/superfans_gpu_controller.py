@@ -131,7 +131,8 @@ def superfans_gpu_controller(fan_settings, FAN_DECREASE_MIN_TIME=30, sleep_sec=2
             #     mean_GPU_temp = [x+y for x, y in zip(gpu_temp, mean_GPU_temp)]
             #
             # mean_GPU_temp = [x/len(prev_GPU_temp) for x in mean_GPU_temp]
-            mean_GPU_temp = [x * 0.5 + y * 0.5 for x, y in zip(GPU_temp, mean_GPU_temp)]
+            # round the temperature to 0.1 deg C
+            mean_GPU_temp = [round(x * 5 + y * 5) / 10.0 for x, y in zip(GPU_temp, mean_GPU_temp)]
 
             max_gpu_temp = max(mean_GPU_temp)
             max_temp = max(max_gpu_temp, max_cpu_temp)
